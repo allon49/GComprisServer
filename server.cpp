@@ -114,15 +114,9 @@ Server::Server(QWidget *parent)
     statusLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
 
 
-
+ //   udpsocket  = new QUdpSocket;
     udpSocket = new QUdpSocket(this);
     messageNo = 1;
-
-
-  /*  statusLabel2 = new QLabel(tr("Ready to broadcast datagrams on port 45454"));
-        statusLabel2->setWordWrap(true);
-
-        startButton = new QPushButton(tr("&Start"));*/
 
 
 
@@ -151,44 +145,45 @@ Server::Server(QWidget *parent)
         sessionOpened();
     }
 
+    QPushButton *quitButton = new QPushButton(tr("Quit2"));
+    quitButton->setAutoDefault(false);
+    connect(quitButton, &QAbstractButton::clicked, this, &QWidget::close);
+    connect(tcpServer, &QTcpServer::newConnection, this, &Server::newTcpConnection);
+    QPushButton *sendButton = new QPushButton(tr("Send All"));
+    sendButton->setAutoDefault(false);
+    connect(sendButton, &QAbstractButton::clicked, this, &Server::sendAll);
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout;
+    buttonLayout->addStretch(1);
+    buttonLayout->addWidget(sendButton);
+    buttonLayout->addWidget(quitButton);
+    buttonLayout->addStretch(1);
+
+    QPushButton *broadcasting = new QPushButton("Broadcasting");
+    connect(broadcasting, &QAbstractButton::clicked, this, &Server::broadcastDatagram);
 
 
-        QPushButton *quitButton = new QPushButton(tr("Quit2"));
-        quitButton->setAutoDefault(false);
-        connect(quitButton, &QAbstractButton::clicked, this, &QWidget::close);
-        connect(tcpServer, &QTcpServer::newConnection, this, &Server::newTcpConnection);
-        QPushButton *sendButton = new QPushButton(tr("Send All"));
-        sendButton->setAutoDefault(false);
-        connect(sendButton, &QAbstractButton::clicked, this, &Server::sendAll);
-
-        QHBoxLayout *buttonLayout = new QHBoxLayout;
-        buttonLayout->addStretch(1);
-        buttonLayout->addWidget(sendButton);
-        buttonLayout->addWidget(quitButton);
-        buttonLayout->addStretch(1);
-
-        QPushButton *broadcasting = new QPushButton("Broadcasting");
-        connect(broadcasting, &QAbstractButton::clicked, this, &Server::broadcastDatagram);
+    QHBoxLayout *buttonLayout2 = new QHBoxLayout;
+    buttonLayout2->addStretch(1);
+    buttonLayout2->addWidget(broadcasting);
+    buttonLayout2->addStretch(1);
 
 
-        QHBoxLayout *buttonLayout2 = new QHBoxLayout;
-        buttonLayout2->addStretch(1);
-        buttonLayout2->addWidget(broadcasting);
-        buttonLayout2->addStretch(1);
+    QVBoxLayout *mainLayout = new QVBoxLayout(this);
+
+    model.list = &list;
+    tableView->setModel(&model);
+    mainLayout->addWidget(tableView);
+    mainLayout->addWidget(statusLabel);
+    mainLayout->addLayout(buttonLayout);
+    mainLayout->addLayout(buttonLayout2);
 
 
-        QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    setWindowTitle(QGuiApplication::applicationDisplayName());
 
-        model.list = &list;
-        tableView->setModel(&model);
-        mainLayout->addWidget(tableView);
-        mainLayout->addWidget(statusLabel);
-        mainLayout->addLayout(buttonLayout);
-        mainLayout->addLayout(buttonLayout2);
-
-
-        setWindowTitle(QGuiApplication::applicationDisplayName());
 }
+
+
 
 void Server::sessionOpened()
 {
@@ -252,19 +247,18 @@ void Server::newTcpConnection()
 
 
 
-
-
-
 void Server::broadcastDatagram()
 {
-    statusLabel->setText(tr("Now broadcasting datagram %1").arg(messageNo));
-    QByteArray datagram = "Broadcast message " + QByteArray::number(messageNo);
-    udpSocket->writeDatagram(datagram.data(), datagram.size(),
-                          QHostAddress::Broadcast, 45454);
-    ++messageNo;
+    statusLabel->setText(tr("Now broadcasting datagram %1").arg(messageNo));  
+    qDebug()<< "is anyone out there";
+    qDebug()<< QHostInfo::localHostName();
+    QByteArray datagram;
+    datagram.setNum((int)REQUEST_CONTROL);
+    datagram.append(QHostInfo::localHostName().toLatin1());
+    qint64 data = udpSocket->writeDatagram(datagram.data(),datagram.size(),QHostAddress::Broadcast,5678);
+    qDebug()<< " size of data :" << data;
+
 }
-
-
 
 
 void Server::slotReadyRead()

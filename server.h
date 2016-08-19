@@ -107,7 +107,13 @@ private:
     QUdpSocket *udpSocket;
     int messageNo;
 
-
+    enum controlID
+    {
+      LOGIN = 0,
+      REQUEST_CONTROL,
+      REQUEST_USERNAME,
+      SET_ACTIVITIES_FILTERS
+    };
 
 
 
