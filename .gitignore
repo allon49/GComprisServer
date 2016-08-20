@@ -1,0 +1,7 @@
+server.pro.user
+Makefile
+.qmake.stash
+*.o
+moc_*.cpp
+*~
+server

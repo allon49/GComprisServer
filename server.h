@@ -51,8 +51,6 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <QDialog>
-
 class QLabel;
 class QPushButton;
 class QTcpServer;
@@ -61,9 +59,9 @@ class QNetworkSession;
 class QTableView;
 class QUdpSocket;
 
+struct Login;
 
-
-
+#include <QDialog>
 // mymodel.h
 #include <QAbstractTableModel>
 
@@ -95,7 +93,6 @@ private slots:
     void disconnected();
     void broadcastDatagram();
 
-
 private:
     QLabel *statusLabel;
     QLabel *statusLabel2;
@@ -106,18 +103,9 @@ private:
     MyModel model;
     QUdpSocket *udpSocket;
     int messageNo;
-
-    enum controlID
-    {
-      LOGIN = 0,
-      REQUEST_CONTROL,
-      REQUEST_USERNAME,
-      SET_ACTIVITIES_FILTERS
-    };
-
-
-
-
+    
+signals:
+    void loginReceived(const Login &log);
 };
 
 #endif

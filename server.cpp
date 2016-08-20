@@ -51,8 +51,8 @@
 #include <QtWidgets>
 #include <QtNetwork>
 
-#include <stdlib.h>
-
+#include "messages.h"
+#include "DataStreamConverter.h"
 #include "server.h"
 
 
@@ -113,12 +113,8 @@ Server::Server(QWidget *parent)
 {
     statusLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
 
-
- //   udpsocket  = new QUdpSocket;
     udpSocket = new QUdpSocket(this);
     messageNo = 1;
-
-
 
     QNetworkConfigurationManager manager;
     if (manager.capabilities() & QNetworkConfigurationManager::NetworkSessionRequired) {
@@ -145,10 +141,9 @@ Server::Server(QWidget *parent)
         sessionOpened();
     }
 
-    QPushButton *quitButton = new QPushButton(tr("Quit2"));
+    QPushButton *quitButton = new QPushButton(tr("Quit"));
     quitButton->setAutoDefault(false);
     connect(quitButton, &QAbstractButton::clicked, this, &QWidget::close);
-    connect(tcpServer, &QTcpServer::newConnection, this, &Server::newTcpConnection);
     QPushButton *sendButton = new QPushButton(tr("Send All"));
     sendButton->setAutoDefault(false);
     connect(sendButton, &QAbstractButton::clicked, this, &Server::sendAll);
@@ -162,12 +157,10 @@ Server::Server(QWidget *parent)
     QPushButton *broadcasting = new QPushButton("Broadcasting");
     connect(broadcasting, &QAbstractButton::clicked, this, &Server::broadcastDatagram);
 
-
     QHBoxLayout *buttonLayout2 = new QHBoxLayout;
     buttonLayout2->addStretch(1);
     buttonLayout2->addWidget(broadcasting);
     buttonLayout2->addStretch(1);
-
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
 
@@ -178,9 +171,7 @@ Server::Server(QWidget *parent)
     mainLayout->addLayout(buttonLayout);
     mainLayout->addLayout(buttonLayout2);
 
-
     setWindowTitle(QGuiApplication::applicationDisplayName());
-
 }
 
 
@@ -203,8 +194,10 @@ void Server::sessionOpened()
     }
 
     tcpServer = new QTcpServer(this);
+    connect(tcpServer, &QTcpServer::newConnection, this, &Server::newTcpConnection);
+
     if (!tcpServer->listen()) {
-        QMessageBox::critical(this, tr("Fortune Server"),
+        QMessageBox::critical(this, tr("Server"),
                               tr("Unable to start the server: %1.")
                               .arg(tcpServer->errorString()));
         close();
@@ -225,7 +218,7 @@ void Server::sessionOpened()
         ipAddress = QHostAddress(QHostAddress::LocalHost).toString();
 
     statusLabel->setText(tr("The server is running on\n\nIP: %1\nport: %2\n\n"
-                            "Run the Fortune Client example now.")
+                            "Run the client now.")
                          .arg(ipAddress).arg(tcpServer->serverPort()));
 }
 
@@ -245,26 +238,39 @@ void Server::newTcpConnection()
     model.insertRows(0, 1, QModelIndex());
 }
 
-
-
 void Server::broadcastDatagram()
 {
     statusLabel->setText(tr("Now broadcasting datagram %1").arg(messageNo));  
     qDebug()<< "is anyone out there";
     qDebug()<< QHostInfo::localHostName();
     QByteArray datagram;
-    datagram.setNum((int)REQUEST_CONTROL);
+    datagram.setNum(static_cast<qint32>(MessageIdentifier::REQUEST_CONTROL));
     datagram.append(QHostInfo::localHostName().toLatin1());
-    qint64 data = udpSocket->writeDatagram(datagram.data(),datagram.size(),QHostAddress::Broadcast,5678);
+    qint64 data = udpSocket->writeDatagram(datagram.data(),datagram.size(),QHostAddress::Broadcast, 5678);
     qDebug()<< " size of data :" << data;
-
 }
-
 
 void Server::slotReadyRead()
 {
     QTcpSocket* clientConnection = qobject_cast<QTcpSocket*>(sender());
-    qDebug() << "Reading " << clientConnection->readAll() << " from " << clientConnection;
+    QByteArray data = clientConnection->readAll();
+    QDataStream in(&data, QIODevice::ReadOnly);
+
+    Identifier messageId;
+    in >> messageId;
+    qDebug() << "Reading " << data << " from " << clientConnection;
+    switch(messageId._id) {
+    case MessageIdentifier::LOGIN:
+        {
+            Login log;
+            in >> log;
+            emit loginReceived(log);
+            break;
+        }
+    default:
+        qDebug() << messageId._id << " received but not handled";
+    };
+    
     QByteArray block;
     QDataStream out(&block, QIODevice::WriteOnly);
     out.setVersion(QDataStream::Qt_4_0);
