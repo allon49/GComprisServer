@@ -103,7 +103,6 @@ private:
     MyModel model;
     QUdpSocket *udpSocket;
     int messageNo;
-    
 signals:
     void loginReceived(const Login &log);
 };

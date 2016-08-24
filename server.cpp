@@ -196,7 +196,7 @@ void Server::sessionOpened()
     tcpServer = new QTcpServer(this);
     connect(tcpServer, &QTcpServer::newConnection, this, &Server::newTcpConnection);
 
-    if (!tcpServer->listen()) {
+    if (!tcpServer->listen(QHostAddress::Any,5678)) {
         QMessageBox::critical(this, tr("Server"),
                               tr("Unable to start the server: %1.")
                               .arg(tcpServer->errorString()));
